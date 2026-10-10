@@ -76,7 +76,6 @@ Create a root account and enable authentication
 
 ```
 etcdctl --endpoints=http://localhost:2379 user add root
-Password of root:
 ```
 Enable authentication:
 ```

@@ -1,3 +1,4 @@
+
 terraform {
   required_version = "~> 1.11"
   required_providers {
@@ -10,7 +11,7 @@ terraform {
 
 provider "etcd" {
   username  = "root"
-  password  = "snBr8ss9ls"
+  password  = "test"
   endpoints = "http://localhost:2379"
   skip_tls  = true
 }
