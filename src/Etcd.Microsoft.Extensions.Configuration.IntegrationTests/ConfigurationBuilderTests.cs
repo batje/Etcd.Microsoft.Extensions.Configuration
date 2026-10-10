@@ -57,7 +57,7 @@ public class ConfigurationBuilderTests
 		Assert.Pass("Credentials info: " + envCredentials.ToString());
 	}
 
-	private static void PerformTest(IConfigurationRoot config)
+	internal static void PerformTest(IConfigurationRoot config)
 	{
 		var testSection = config.GetSection("TestSection");
 		var testSubSection = testSection.GetSection("SubSection");

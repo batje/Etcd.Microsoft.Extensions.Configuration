@@ -31,6 +31,9 @@ public class ConfigurationBasedEtcdSettings : IEtcdSettings
 			throw new EtcdConfigurationException($"`{configurationSectionName}` configuration section is missing");
 
 		ConnectionString = section[nameof(ConnectionString)] ?? throw new EtcdConfigurationException($"'{nameof(ConnectionString)}' is missing in configuration");
+
+		var caCertificateFile = section[nameof(CaCertificateFile)];
+		CaCertificateFile = string.IsNullOrEmpty(caCertificateFile) ? null : caCertificateFile;
 	}
 
 	/// <summary>
@@ -40,4 +43,13 @@ public class ConfigurationBasedEtcdSettings : IEtcdSettings
 	/// The connection string.
 	/// </value>
 	public string ConnectionString { get; }
+
+	/// <summary>
+	/// Gets the path to a PEM file with the CA certificate(s) used to validate the etcd server certificate.
+	/// Read from the optional `CaCertificateFile` key of the configuration section.
+	/// </summary>
+	/// <value>
+	/// The CA certificate file path.
+	/// </value>
+	public string? CaCertificateFile { get; }
 }

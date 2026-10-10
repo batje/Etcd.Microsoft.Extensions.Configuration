@@ -98,7 +98,7 @@ public static class ConfigurationBuilderExtensions
 	{
 		ArgumentNullException.ThrowIfNull(configurationBuilder);
 
-		var clientFactory = new EtcdClientFactory(settings);
+		var clientFactory = new EtcdClientFactory(settings, (credentials as CertificateCredentials)?.ClientCertificate);
 		var client = new EtcdKeyValueClient(clientFactory, credentials, enableWatch, unwatchOnDispose);
 
 		if (keyPrefixes != null)

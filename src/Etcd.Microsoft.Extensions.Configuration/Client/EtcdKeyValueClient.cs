@@ -30,6 +30,7 @@ public class EtcdKeyValueClient : IEtcdKeyValueClient
 
 	private string? _userName;
 	private string? _token;
+	private bool _useClientCertificate;
 
 	private bool _isDisposed;
 
@@ -146,10 +147,20 @@ public class EtcdKeyValueClient : IEtcdKeyValueClient
 
 	/// <summary>
 	/// Authenticates the client.
+	/// With <see cref="CertificateCredentials"/> no token is requested: etcd identifies the user by the
+	/// common name (CN) of the TLS client certificate presented while connecting.
 	/// </summary>
 	/// <param name="credentials">The credentials.</param>
 	private void Authenticate(ICredentials credentials)
 	{
+		if (credentials is CertificateCredentials)
+		{
+			_useClientCertificate = true;
+			_userName = credentials.UserName;
+
+			return;
+		}
+
 		var result = _client.Authenticate(new AuthenticateRequest
 		{
 			Name = credentials.UserName,
@@ -208,11 +219,13 @@ public class EtcdKeyValueClient : IEtcdKeyValueClient
 		}, GetMetadata()).Perm;
 
 	private Metadata GetMetadata() =>
-		[new Metadata.Entry("token", _token!)];
+		_useClientCertificate
+			? []
+			: [new Metadata.Entry("token", _token!)];
 
 	private void CheckIsAuthenticated()
 	{
-		if (_token == null || _userName == null)
+		if (_userName == null || (_token == null && !_useClientCertificate))
 			throw new InvalidOperationException("Etcd client is not authenticated");
 	}
 

@@ -1,3 +1,4 @@
+
 terraform {
   required_version = "~> 1.11"
   required_providers {
@@ -5,12 +6,20 @@ terraform {
       source  = "Ferlab-Ste-Justine/etcd"
       version = "0.11.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.1"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.5"
+    }
   }
 }
 
 provider "etcd" {
   username  = "root"
-  password  = "snBr8ss9ls"
+  password  = "test"
   endpoints = "http://localhost:2379"
   skip_tls  = true
 }
