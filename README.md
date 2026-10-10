@@ -62,6 +62,56 @@ var myKeyValue = mySection["MyKeyName"];
 
 Settings can be mixed from different locations.
 
+### HTTPS with a private CA
+
+If the etcd server certificate is signed by a private CA, you can pass the CA certificate (PEM) instead of installing it in the system store:
+
+```csharp
+var config = new ConfigurationBuilder()
+  .AddEtcd(
+    new Credentials("MyEtcdUserName", "passw"),
+    new EtcdSettings("https://serveraddress:2379", "/etc/etcd/pki/ca.crt"))
+  .Build();
+```
+
+or in appsettings.json:
+
+```json
+{
+  "EtcdSettings": {
+    "ConnectionString": "https://serveraddress:2379",
+    "CaCertificateFile": "/etc/etcd/pki/ca.crt"
+  }
+}
+```
+
+Host name checks still apply: the server certificate must contain the host name of the connection string.
+
+### TLS client certificate authentication (common name)
+
+etcd can [authenticate users by the common name (CN) of a TLS client certificate](https://etcd.io/docs/latest/op-guide/authentication/rbac/#using-tls-common-name). The client does not need a password and does not request an authentication token. The CN of the certificate is the etcd user name, and that user's roles decide which keys can be read.
+
+```csharp
+var config = new ConfigurationBuilder()
+  .AddEtcd(
+    CertificateCredentials.FromPemFiles("/etc/myapp/etcd/client.crt", "/etc/myapp/etcd/client.key"),
+    new EtcdSettings("https://serveraddress:2379", "/etc/myapp/etcd/ca.crt"))
+  .Build();
+```
+
+* `CertificateCredentials.FromPemFiles(certificateFile, keyFile)` loads a PEM certificate and a PEM private key (PKCS#1, PKCS#8 or EC). If `keyFile` is omitted, the key is read from the certificate file.
+* `CertificateCredentials.FromEnvironmentVariables()` reads the file paths from `ETCD_CLIENT_CERTIFICATE_FILE` and `ETCD_CLIENT_KEY_FILE`. You can pass other variable names.
+* `new CertificateCredentials(X509Certificate2)` accepts a certificate you loaded yourself. It must have a private key.
+* The connection string must use `https`.
+
+Requirements on the etcd side:
+
+* the server runs with `--client-cert-auth=true` and `--trusted-ca-file=<CA that signed the client certificates>`
+* an etcd user exists whose name equals the certificate CN. It can be created without a password (`etcdctl user add <name> --no-password`) so it can only log in with the certificate
+* that user has a role with read permission on the key prefixes you load
+
+Watching keys (`enableWatch`) works the same as with password authentication.
+
 ## Testing
 
 To set up an integration test environment, make sure you have an etcd instance running on the standard port, without SSL: http://localhost:2379
@@ -101,6 +151,61 @@ terraform apply
 ```
 
 then run the tests from the src folder
+
+### Testing with TLS client certificates
+
+The tests in `CertificateAuthenticationTests` connect to an https listener that requires a client certificate. Without the certificates they are reported as *ignored*. The existing http listener on port 2379 stays in place for the password tests.
+
+1. `terraform apply` in `tests/terraform` (see above) also:
+   * creates a test CA (`ca.crt`, `ca.key`), a server certificate for `localhost` and two client certificates in `tests/certs/`: `client.crt` (CN `MyCertUser`) and `unknown-client.crt` (CN `UnknownCertUser`, which has no etcd user)
+   * creates the etcd user `MyCertUser` **without a password**, with the same roles as `MyUserName`
+
+   The `tls` and `local` providers are new, so run `terraform init -upgrade` first if you already initialised the folder.
+
+2. Give etcd access to the server certificate:
+
+   ```
+   sudo mkdir -p /etc/etcd/pki
+   sudo cp tests/certs/ca.crt tests/certs/server.crt tests/certs/server.key /etc/etcd/pki/
+   sudo chown -R etcd:etcd /etc/etcd/pki
+   sudo chmod 600 /etc/etcd/pki/server.key
+   ```
+
+3. Add an https listener with client certificate authentication. With the Ubuntu `etcd-server` package, edit `/etc/default/etcd`:
+
+   ```
+   ETCD_LISTEN_CLIENT_URLS="http://localhost:2379,https://localhost:2378"
+   ETCD_ADVERTISE_CLIENT_URLS="http://localhost:2379,https://localhost:2378"
+   ETCD_CERT_FILE="/etc/etcd/pki/server.crt"
+   ETCD_KEY_FILE="/etc/etcd/pki/server.key"
+   ETCD_TRUSTED_CA_FILE="/etc/etcd/pki/ca.crt"
+   ETCD_CLIENT_CERT_AUTH="true"
+   ```
+
+   (or pass the same values as `--listen-client-urls`, `--advertise-client-urls`, `--cert-file`, `--key-file`, `--trusted-ca-file` and `--client-cert-auth` command line flags) and restart etcd:
+
+   ```
+   sudo systemctl restart etcd
+   ```
+
+4. Check the setup:
+
+   ```
+   etcdctl --endpoints=https://localhost:2378 --cacert=tests/certs/ca.crt \
+     --cert=tests/certs/client.crt --key=tests/certs/client.key \
+     get TestSection --prefix
+   ```
+
+   This must print the TestSection keys without asking for a user or password.
+
+5. Run the tests from the `src` folder: `dotnet test`
+
+The tests can be pointed at another setup with these environment variables:
+
+| Variable | Default |
+|---|---|
+| `ETCD_TLS_TEST_CONNECTION_STRING` | `https://localhost:2378` |
+| `ETCD_TLS_TEST_CERTS_FOLDER` | the `tests/certs` folder, found by searching upwards from the test binaries |
 
 ## Contributing
 

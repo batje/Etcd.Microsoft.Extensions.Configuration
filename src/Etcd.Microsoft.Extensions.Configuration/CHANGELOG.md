@@ -1,4 +1,13 @@
-# Changelog
+﻿# Changelog
+
+## [3.3.0] - Unreleased
+
+### Added
+
+- TLS client certificate authentication using the certificate common name (CN) as etcd user name, see https://etcd.io/docs/latest/op-guide/authentication/rbac/#using-tls-common-name. Use `CertificateCredentials` (`FromPemFiles`, `FromEnvironmentVariables` or an `X509Certificate2`). No password or authentication token is used.
+- `IEtcdSettings.CaCertificateFile`, `EtcdSettings(connectionString, caCertificateFile)` and the `CaCertificateFile` key in `ConfigurationBasedEtcdSettings` to validate the etcd server certificate against a private CA.
+- `EtcdClientFactory(settings, clientCertificate)` constructor.
+- Integration tests and terraform (`tests/terraform/tls.tf`) for client certificate authentication.
 
 ## [3.2.1] - 2026-07-07
 

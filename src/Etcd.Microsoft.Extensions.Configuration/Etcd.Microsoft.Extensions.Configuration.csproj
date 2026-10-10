@@ -8,7 +8,7 @@
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-		<Version>3.2.1</Version>
+		<Version>3.3.0</Version>
 
 		<Description>Etcd based configuration provider for Microsoft.Extensions.Configuration</Description>
 		<Authors>Simplify community</Authors>
@@ -23,6 +23,9 @@
 
 		<PackageReleaseNotes>See https://github.com/SimplifyNet/Etcd.Microsoft.Extensions.Configuration/tree/master/src/Etcd.Microsoft.Extensions.Configuration/CHANGELOG.md for details</PackageReleaseNotes>
 	</PropertyGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="Etcd.Microsoft.Extensions.Configuration.Tests" />
+	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="dotnet-etcd" Version="9.1.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.9" />

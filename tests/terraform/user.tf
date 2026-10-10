@@ -37,14 +37,10 @@ resource "etcd_role" "my_prefix" {
 resource "etcd_role" "my_complex_prefix" {
   name = "MyComplexPrefix"
 
+  # One "readwrite" permission, not separate "read" and "write" blocks: etcd stores one
+  # permission per key range, so a second grant on the same range replaces the first.
   permissions {
-    permission = "read"
-    key        = data.etcd_prefix_range_end.mycomplex_prefix.key
-    range_end  = data.etcd_prefix_range_end.mycomplex_prefix.range_end
-  }
-
-  permissions {
-    permission = "write"
+    permission = "readwrite"
     key        = data.etcd_prefix_range_end.mycomplex_prefix.key
     range_end  = data.etcd_prefix_range_end.mycomplex_prefix.range_end
   }
@@ -55,5 +51,12 @@ resource "etcd_role" "my_complex_prefix" {
 resource "etcd_user" "user" {
   username = "MyUserName"
   password = "passw"
+  roles    = [etcd_role.test_section.name, etcd_role.my_prefix.name, etcd_role.my_complex_prefix.name]
+}
+
+# A user without password: it can only log in with a TLS client certificate
+# whose common name (CN) is "MyCertUser". The certificate is created in tls.tf.
+resource "etcd_user" "cert_user" {
+  username = "MyCertUser"
   roles    = [etcd_role.test_section.name, etcd_role.my_prefix.name, etcd_role.my_complex_prefix.name]
 }
